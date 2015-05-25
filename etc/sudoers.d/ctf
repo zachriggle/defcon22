@@ -1,0 +1,5 @@
+
+ctf ALL=(eliza) NOPASSWD: ALL
+ctf ALL=(justify) NOPASSWD: ALL
+ctf ALL=(imap) NOPASSWD: ALL
+ctf ALL=(wdub) NOPASSWD: ALL
