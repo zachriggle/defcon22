@@ -1,4 +1,4 @@
-#!/bin/sh
+#!/bin/bash
 apt-get install git qemu qemu-user qemu-user-static binfmt
 apt-get install libc6-i386 libc6-armhf-cross xinetd
 
