@@ -2,7 +2,7 @@
 apt-get install git qemu qemu-user qemu-user-static binfmt
 apt-get install libc6-i386 libc6-armhf-cross xinetd
 
-for user in eliza imap wdub justify; do
+for user in ctf eliza imap wdub justify; do
   useradd -m $user
   passwd  -l $user
   chown -R $user:$user /home/$user
