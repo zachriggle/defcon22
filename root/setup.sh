@@ -1,6 +1,6 @@
 #!/bin/sh
 apt-get install git qemu qemu-user qemu-user-static binfmt
-apt-get install libc6-i386 libc6-armhf-cross
+apt-get install libc6-i386 libc6-armhf-cross xinetd
 
 for user in eliza imap wdub justify; do
   useradd -m $user
@@ -19,3 +19,4 @@ dpkg -x libglib2.0-0_2.40.2-0ubuntu1_armhf.deb out
 cp out/lib/arm-linux-gnueabihf/* /usr/arm-linux-gnueabihf/lib
 popd
 
+service xinetd restart
