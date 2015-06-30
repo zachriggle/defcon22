@@ -1,63 +1,57 @@
 #!/bin/bash
-apt-get install git qemu qemu-user qemu-user-static binfmt
-apt-get install libc6-i386 libc6-armhf-cross xinetd
 
-for user in ctf eliza imap wdub justify; do
-  useradd -m $user
-  passwd  -l $user
-  chown -R $user:$user /home/$user
-  chown    root:$user  /home/$user
-  chmod 1770 /home/$user
-  chmod +x /home/$user/$user
+# Update and install prerequisites
+apt-get -y update
+[ -z "$TRAVIS" ] && apt-get -y upgrade
+apt-get -y install git qemu qemu-user qemu-user-static binfmt-support
+apt-get -y install libc6-i386 libc6-armhf-cross xinetd
+
+# DEFCON 22 challenges require /dev/ctf
+ln -s /dev/urandom /dev/ctf
+
+# By default, everything should be owned by root, and read-only.
+chmod 700 /root
+for file in $(git ls-files); do
+    chown root:root $file
+done
+for file in $(git ls-files -- etc/sudoers.d); do
+    chmod 0440 $file
+done
+for file in $(git ls-files -- usr); do
+    chmod +rx $file
 done
 
-pushd /root
-wget http://launchpadlibrarian.net/158174573/libpcre3_8.31-2ubuntu2_armhf.deb
-wget http://launchpadlibrarian.net/185771211/libglib2.0-0_2.40.2-0ubuntu1_armhf.deb
-dpkg -x libpcre3_8.31-2ubuntu2_armhf.deb out
-dpkg -x libglib2.0-0_2.40.2-0ubuntu1_armhf.deb out
-cp out/lib/arm-linux-gnueabihf/* /usr/arm-linux-gnueabihf/lib
-popd
+USERS=(eliza imap wdub justify)
 
+# Each
+for user in ${USERS[@]}; do
+  useradd -m $user
+  passwd  -l $user
+
+  # Everything inside of the home directory should belong to the user
+  chown -R $user:$user /home/$user
+  chmod -R ug=rw,o=    /home/$user
+
+  # The home directory itself is owned by root, so that it cannot be deleted.
+  chown    root:$user  /home/$user
+  chmod    1770        /home/$user
+
+  # The service binary should be owned by the CTF user, so that it cannot
+  # be modified or deleted.
+  if [ -e /home/$user/$user ];
+  then
+    chown    ctf:ctf     /home/$user/$user
+    chmod    0755        /home/$user/$user
+  fi
+done
+
+# Kickstart xinetd
 service xinetd restart
-
 
 # Everything below this line is optional hardening
 apt-get -yq remove kexec-tools
 apt-get -yq install fail2ban kpartx unattended-upgrades
 rm -f /boot/System.map*
-
-cat > /etc/default/kexec << EOF
-LOAD_EXEC=false
-EOF
-
-cat > /etc/apt/apt.conf.d/50unattended-upgrades << EOF
-Unattended-Upgrade::Allowed-Origins {
-        "Ubuntu trusty-security";
-        "Ubuntu trusty-updates";
-};
-EOF
-cat > /etc/apt/apt.conf.d/10periodic << EOF
-APT::Periodic::Update-Package-Lists "1";
-APT::Periodic::Download-Upgradeable-Packages "1";
-APT::Periodic::AutocleanInterval "7";
-APT::Periodic::Unattended-Upgrade "1";
-APT::Periodic::Unattended-Upgrade::Automatic-Reboot "true";
-EOF
-
-# Have to leave symlink stuff on for challenges.
-cat > /etc/sysctl.d/99-ctf.conf << EOF
-# fs.protected_hardlinks = 1
-# fs.protected_symlinks = 1
-kernel.kptr_restrict = 1
-kernel.perf_event_paranoid = 2
-kernel.randomize_va_space = 2
-kernel.yama.ptrace_scope = 1
-net.ipv4.tcp_syncookies = 1
-net.ipv6.conf.all.disable_ipv6 = 1
-kernel.core_pattern = core
-EOF
-sysctl --system
 
 # Disable 'last'
 chmod o-r /var/*/{btmp,wtmp,utmp}
